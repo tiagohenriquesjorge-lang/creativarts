@@ -5,10 +5,18 @@ import { useRouter, useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import MultipleImageUpload from '@/components/admin/MultipleImageUpload'
+import { deleteImage, extractPathFromUrl } from '@/lib/supabase/storage'
 
 interface Category {
   id: string
   name: string
+}
+
+interface ImageItem {
+  url: string
+  is_primary: boolean
+  position: number
 }
 
 export default function EditProductPage() {
@@ -19,7 +27,9 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
-  
+  const [images, setImages] = useState<ImageItem[]>([])
+  const [originalImages, setOriginalImages] = useState<ImageItem[]>([])
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -50,6 +60,7 @@ export default function EditProductPage() {
 
   async function loadProduct() {
     try {
+      // Carregar produto
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -71,6 +82,23 @@ export default function EditProductPage() {
           featured: data.featured || false,
           tags: Array.isArray(data.tags) ? data.tags.join(', ') : '',
         })
+      }
+
+      // Carregar imagens do produto
+      const { data: productImages, error: imagesError } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId)
+        .order('position')
+
+      if (!imagesError && productImages) {
+        const imageItems: ImageItem[] = productImages.map((img) => ({
+          url: img.image_url,
+          is_primary: img.is_primary,
+          position: img.position,
+        }))
+        setImages(imageItems)
+        setOriginalImages(imageItems) // Guardar cópia para comparar depois
       }
     } catch (error) {
       console.error('Error loading product:', error)
@@ -107,7 +135,8 @@ export default function EditProductPage() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0)
 
-      const { error } = await supabase
+      // 1. Atualizar produto
+      const { error: productError } = await supabase
         .from('products')
         .update({
           name: formData.name,
@@ -123,7 +152,10 @@ export default function EditProductPage() {
         })
         .eq('id', productId)
 
-      if (error) throw error
+      if (productError) throw productError
+
+      // 2. Atualizar imagens
+      await updateProductImages()
 
       alert('Produto atualizado com sucesso!')
       router.push('/admin/produtos')
@@ -132,6 +164,50 @@ export default function EditProductPage() {
       alert(`Erro ao atualizar produto: ${error.message}`)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function updateProductImages() {
+    try {
+      // Encontrar imagens removidas
+      const removedImages = originalImages.filter(
+        (original) => !images.find((current) => current.url === original.url)
+      )
+
+      // Apagar imagens removidas do storage
+      for (const img of removedImages) {
+        const path = extractPathFromUrl(img.url, 'PRODUCTS')
+        if (path) {
+          await deleteImage('PRODUCTS', path)
+        }
+      }
+
+      // Apagar todos os registros de imagens antigas
+      await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', productId)
+
+      // Inserir novos registros de imagens
+      if (images.length > 0) {
+        const imageRecords = images.map((img) => ({
+          product_id: productId,
+          image_url: img.url,
+          position: img.position,
+          is_primary: img.is_primary,
+        }))
+
+        const { error: imagesError } = await supabase
+          .from('product_images')
+          .insert(imageRecords)
+
+        if (imagesError) {
+          console.error('Error saving images:', imagesError)
+        }
+      }
+    } catch (error) {
+      console.error('Error updating images:', error)
+      // Não falhar a atualização do produto se imagens falharem
     }
   }
 
@@ -224,6 +300,13 @@ export default function EditProductPage() {
             placeholder="Descrição detalhada do produto..."
           />
         </div>
+
+        {/* Upload de Imagens */}
+        <MultipleImageUpload
+          images={images}
+          onImagesChange={setImages}
+          maxImages={5}
+        />
 
         {/* Grid: Categoria e Preço */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

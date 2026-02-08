@@ -5,17 +5,25 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import MultipleImageUpload from '@/components/admin/MultipleImageUpload'
 
 interface Category {
   id: string
   name: string
 }
 
+interface ImageItem {
+  url: string
+  is_primary: boolean
+  position: number
+}
+
 export default function NewProductPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
-  
+  const [images, setImages] = useState<ImageItem[]>([])
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -70,7 +78,8 @@ export default function NewProductPage() {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0)
 
-      const { data, error } = await supabase
+      // 1. Criar produto
+      const { data: product, error: productError } = await supabase
         .from('products')
         .insert([{
           name: formData.name,
@@ -85,8 +94,28 @@ export default function NewProductPage() {
           tags: tagsArray,
         }])
         .select()
+        .single()
 
-      if (error) throw error
+      if (productError) throw productError
+
+      // 2. Salvar imagens (se houver)
+      if (images.length > 0 && product) {
+        const imageRecords = images.map((img) => ({
+          product_id: product.id,
+          image_url: img.url,
+          position: img.position,
+          is_primary: img.is_primary,
+        }))
+
+        const { error: imagesError } = await supabase
+          .from('product_images')
+          .insert(imageRecords)
+
+        if (imagesError) {
+          console.error('Error saving images:', imagesError)
+          // Não falhar se imagens não salvarem, produto já foi criado
+        }
+      }
 
       alert('Produto criado com sucesso!')
       router.push('/admin/produtos')
@@ -176,6 +205,13 @@ export default function NewProductPage() {
             placeholder="Descrição detalhada do produto..."
           />
         </div>
+
+        {/* Upload de Imagens */}
+        <MultipleImageUpload
+          images={images}
+          onImagesChange={setImages}
+          maxImages={5}
+        />
 
         {/* Grid: Categoria e Preço */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

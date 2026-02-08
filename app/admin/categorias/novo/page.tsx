@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase/client'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
+import ImageUpload from '@/components/admin/ImageUpload'
 
 interface Category {
   id: string
@@ -152,22 +153,14 @@ export default function NewCategoryPage() {
           />
         </div>
 
-        {/* URL da Imagem */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            URL da Imagem
-          </label>
-          <input
-            type="url"
-            value={formData.image_url}
-            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            placeholder="https://exemplo.com/imagem.jpg"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            URL completo da imagem da categoria
-          </p>
-        </div>
+        {/* Upload de Imagem */}
+        <ImageUpload
+          bucket="CATEGORIES"
+          currentImageUrl={formData.image_url}
+          onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+          label="Imagem da Categoria"
+          folder="categories"
+        />
 
         {/* Grid: Categoria Pai e Posição */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
