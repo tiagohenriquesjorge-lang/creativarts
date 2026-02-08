@@ -44,48 +44,64 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function testStorage() {
   try {
-    console.log('\n📦 TESTE 1: Listar Buckets')
+    console.log('\n📦 TESTE 1: Verificar Buckets (via upload)')
     console.log('-'.repeat(50))
-    
-    const { data: buckets, error: bucketsError } = await supabase
-      .storage
-      .listBuckets()
-    
-    if (bucketsError) {
-      console.error('❌ Erro ao listar buckets:', bucketsError.message)
-      return false
-    }
-    
-    console.log(`✅ Total de buckets: ${buckets.length}`)
-    
-    const productBucket = buckets.find(b => b.id === 'product-images')
-    const categoryBucket = buckets.find(b => b.id === 'category-images')
-    
-    if (productBucket) {
-      console.log(`✅ Bucket 'product-images' encontrado (público: ${productBucket.public})`)
-    } else {
-      console.log('❌ Bucket \'product-images\' NÃO encontrado!')
-      console.log('   Execute: supabase/storage-setup.sql')
-      return false
-    }
-    
-    if (categoryBucket) {
-      console.log(`✅ Bucket 'category-images' encontrado (público: ${categoryBucket.public})`)
-    } else {
-      console.log('❌ Bucket \'category-images\' NÃO encontrado!')
-      console.log('   Execute: supabase/storage-setup.sql')
-      return false
-    }
-    
-    console.log('\n📤 TESTE 2: Upload de Imagem de Teste')
-    console.log('-'.repeat(50))
-    
-    // Criar imagem de teste (1x1 pixel PNG)
+    console.log('   Nota: Testando buckets através de upload de teste')
+    console.log('   (listBuckets requer service role key)')
+
+    // Criar imagem de teste mínima
     const testImageBuffer = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'
     )
-    
+
+    // Testar bucket de produtos
+    console.log('   Testando bucket: product-images...')
+    const testPath1 = `tests/bucket-test-${Date.now()}.png`
+    const { error: testError1 } = await supabase
+      .storage
+      .from('product-images')
+      .upload(testPath1, testImageBuffer, {
+        contentType: 'image/png',
+        upsert: false
+      })
+
+    if (testError1) {
+      console.log(`   ❌ Bucket 'product-images': ${testError1.message}`)
+      console.log('   Execute: node scripts/setup-storage.js')
+      return false
+    } else {
+      console.log('   ✅ Bucket \'product-images\' OK')
+      // Limpar teste
+      await supabase.storage.from('product-images').remove([testPath1])
+    }
+
+    // Testar bucket de categorias
+    console.log('   Testando bucket: category-images...')
+    const testPath2 = `tests/bucket-test-${Date.now()}.png`
+    const { error: testError2 } = await supabase
+      .storage
+      .from('category-images')
+      .upload(testPath2, testImageBuffer, {
+        contentType: 'image/png',
+        upsert: false
+      })
+
+    if (testError2) {
+      console.log(`   ❌ Bucket 'category-images': ${testError2.message}`)
+      console.log('   Execute: node scripts/setup-storage.js')
+      return false
+    } else {
+      console.log('   ✅ Bucket \'category-images\' OK')
+      // Limpar teste
+      await supabase.storage.from('category-images').remove([testPath2])
+    }
+
+    console.log('✅ Ambos os buckets estão funcionando!')
+
+    console.log('\n📤 TESTE 2: Upload de Imagem de Teste')
+    console.log('-'.repeat(50))
+
     const testFileName = `test-${Date.now()}.png`
     const testPath = `tests/${testFileName}`
     
