@@ -21,13 +21,14 @@ const path = require('path')
 require('dotenv').config({ path: '.env.local' })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 console.log('\n🧪 TESTE DO SISTEMA DE UPLOAD\n')
 console.log('='.repeat(50))
 
 // Verificar variáveis de ambiente
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey) {
   console.error('❌ ERRO: Variáveis de ambiente não encontradas!')
   console.error('   Verifique se .env.local existe e contém:')
   console.error('   - NEXT_PUBLIC_SUPABASE_URL')
@@ -35,9 +36,13 @@ if (!supabaseUrl || !supabaseKey) {
   process.exit(1)
 }
 
+// Usar service role key se disponível (para testes), senão usar anon key
+const supabaseKey = supabaseServiceKey || supabaseAnonKey
+const keyType = supabaseServiceKey ? 'SERVICE ROLE' : 'ANON'
+
 console.log('✅ Variáveis de ambiente carregadas')
 console.log(`   URL: ${supabaseUrl}`)
-console.log(`   Key: ${supabaseKey.substring(0, 20)}...`)
+console.log(`   Key: ${keyType} (${supabaseKey.substring(0, 20)}...)`)
 
 // Criar cliente Supabase
 const supabase = createClient(supabaseUrl, supabaseKey)

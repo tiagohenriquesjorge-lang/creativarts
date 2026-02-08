@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { Search, Download, Eye, Package, Truck, CheckCircle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
@@ -26,6 +27,7 @@ const STATUS_CONFIG = {
 }
 
 export default function AdminOrdersPage() {
+  const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -257,7 +259,7 @@ export default function AdminOrdersPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end">
                           <button
-                            onClick={() => window.location.href = `/admin/encomendas/${order.id}`}
+                            onClick={() => router.push(`/admin/encomendas/${order.id}`)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Ver detalhes"
                           >
