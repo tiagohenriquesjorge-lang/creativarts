@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 Teste de Upload - CreativART's</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+    .test-section h2 {
+      color: #333;
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover { transform: translateY(-2px); }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .result.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .result.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .result.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    .status-badge.success {
+      background: #d4edda;
+      color: #155724;
+    }
+    .status-badge.error {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    .status-badge.pending {
+      background: #fff3cd;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Teste de Upload</h1>
+    <p class="subtitle">Verifique se o sistema de upload está configurado corretamente</p>
+
+    <!-- Teste 1: Verificar Buckets -->
+    <div class="test-section">
+      <h2>📦 Teste 1: Verificar Buckets <span id="status1" class="status-badge pending">Pendente</span></h2>
+      <p>Verifica se os buckets 'product-images' e 'category-images' existem.</p>
+      <button onclick="testBuckets()" id="btn1">Executar Teste 1</button>
+      <div id="result1"></div>
+    </div>
+
+    <!-- Teste 2: Upload de Teste -->
+    <div class="test-section">
+      <h2>📤 Teste 2: Upload de Imagem <span id="status2" class="status-badge pending">Pendente</span></h2>
+      <p>Faz upload de uma imagem de teste (1x1 pixel PNG).</p>
+      <button onclick="testUpload()" id="btn2">Executar Teste 2</button>
+      <div id="result2"></div>
+    </div>
+
+    <!-- Teste 3: Leitura Pública -->
+    <div class="test-section">
+      <h2>🔗 Teste 3: URL Pública <span id="status3" class="status-badge pending">Pendente</span></h2>
+      <p>Verifica se a URL pública está acessível.</p>
+      <button onclick="testPublicUrl()" id="btn3" disabled>Executar Teste 3</button>
+      <div id="result3"></div>
+    </div>
+
+    <!-- Teste 4: Remoção -->
+    <div class="test-section">
+      <h2>🗑️ Teste 4: Remover Imagem <span id="status4" class="status-badge pending">Pendente</span></h2>
+      <p>Remove a imagem de teste do storage.</p>
+      <button onclick="testDelete()" id="btn4" disabled>Executar Teste 4</button>
+      <div id="result4"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    // IMPORTANTE: Substitua com suas credenciais
+    const SUPABASE_URL = 'https://omyzinorxureifoyzffx.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9teXppbm9yeHVyZWlmb3l6ZmZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzgzNDI3NzcsImV4cCI6MjA1MzkxODc3N30.Ks3Uh_aTqPqJPqJqJqJqJqJqJqJqJqJqJqJqJqJqJqI'
+
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    window.testImagePath = null
+
+    console.log('✅ Supabase client inicializado')
+  </script>
+
+  <script>
+    function showResult(id, message, type = 'info') {
+      const resultDiv = document.getElementById(`result${id}`)
+      resultDiv.className = `result ${type}`
+      resultDiv.textContent = message
+    }
+
+    function updateStatus(id, status) {
+      const statusBadge = document.getElementById(`status${id}`)
+      statusBadge.className = `status-badge ${status}`
+      statusBadge.textContent = status === 'success' ? '✅ Passou' : status === 'error' ? '❌ Falhou' : '⏳ Executando'
+    }
+
+    async function testBuckets() {
+      const btn = document.getElementById('btn1')
+      btn.disabled = true
+      btn.innerHTML = 'Testando... <span class="loading"></span>'
+      updateStatus(1, 'pending')
+
+      try {
+        const { data, error } = await window.supabase.storage.listBuckets()
+
+        if (error) throw error
+
+        const productBucket = data.find(b => b.id === 'product-images')
+        const categoryBucket = data.find(b => b.id === 'category-images')
+
+        let message = `Total de buckets: ${data.length}\n\n`
+
+        if (productBucket) {
+          message += `✅ 'product-images' encontrado (público: ${productBucket.public})\n`
+        } else {
+          message += `❌ 'product-images' NÃO encontrado!\n`
+        }
+
+        if (categoryBucket) {
+          message += `✅ 'category-images' encontrado (público: ${categoryBucket.public})\n`
+        } else {
+          message += `❌ 'category-images' NÃO encontrado!\n`
+        }
+
+        if (productBucket && categoryBucket) {
+          showResult(1, message, 'success')
+          updateStatus(1, 'success')
+          document.getElementById('btn2').disabled = false
+        } else {
+          message += `\n⚠️ Execute: supabase/storage-setup.sql`
+          showResult(1, message, 'error')
+          updateStatus(1, 'error')
+        }
+      } catch (error) {
+        showResult(1, `❌ Erro: ${error.message}`, 'error')
+        updateStatus(1, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Executar Teste 1'
+      }
+    }
+
+    async function testUpload() {
+      const btn = document.getElementById('btn2')
+      btn.disabled = true
+      btn.innerHTML = 'Testando... <span class="loading"></span>'
+      updateStatus(2, 'pending')
+
+      try {
+        // Criar imagem de teste (1x1 pixel PNG)
+        const base64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        const blob = await fetch(`data:image/png;base64,${base64}`).then(r => r.blob())
+
+        const testFileName = `test-${Date.now()}.png`
+        const testPath = `tests/${testFileName}`
+
+        const { data, error } = await window.supabase.storage
+          .from('product-images')
+          .upload(testPath, blob, {
+            contentType: 'image/png',
+            upsert: false
+          })
+
+        if (error) throw error
+
+        window.testImagePath = testPath
+
+        showResult(2, `✅ Upload bem-sucedido!\n\nPath: ${data.path}\nBucket: product-images\nTamanho: ${blob.size} bytes`, 'success')
+        updateStatus(2, 'success')
+        document.getElementById('btn3').disabled = false
+      } catch (error) {
+        showResult(2, `❌ Erro: ${error.message}\n\nPossíveis causas:\n- Policies não configuradas\n- Sem permissão de upload\n- Bucket não existe`, 'error')
+        updateStatus(2, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Executar Teste 2'
+      }
+    }
+
+    async function testPublicUrl() {
+      const btn = document.getElementById('btn3')
+      btn.disabled = true
+      btn.innerHTML = 'Testando... <span class="loading"></span>'
+      updateStatus(3, 'pending')
+
+      try {
+        if (!window.testImagePath) {
+          throw new Error('Execute o Teste 2 primeiro!')
+        }
+
+        const { data } = window.supabase.storage
+          .from('product-images')
+          .getPublicUrl(window.testImagePath)
+
+        const url = data.publicUrl
+
+        // Tentar carregar a imagem
+        const response = await fetch(url)
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
+
+        showResult(3, `✅ URL pública acessível!\n\nURL: ${url}\n\nStatus: ${response.status} ${response.statusText}\nTipo: ${response.headers.get('content-type')}`, 'success')
+        updateStatus(3, 'success')
+        document.getElementById('btn4').disabled = false
+      } catch (error) {
+        showResult(3, `❌ Erro: ${error.message}\n\nPossíveis causas:\n- Bucket não é público\n- URL inválida\n- CORS bloqueado`, 'error')
+        updateStatus(3, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Executar Teste 3'
+      }
+    }
+
+    async function testDelete() {
+      const btn = document.getElementById('btn4')
+      btn.disabled = true
+      btn.innerHTML = 'Testando... <span class="loading"></span>'
+      updateStatus(4, 'pending')
+
+      try {
+        if (!window.testImagePath) {
+          throw new Error('Execute o Teste 2 primeiro!')
+        }
+
+        const { error } = await window.supabase.storage
+          .from('product-images')
+          .remove([window.testImagePath])
+
+        if (error) throw error
+
+        showResult(4, `✅ Imagem removida com sucesso!\n\nPath removido: ${window.testImagePath}\n\n🎉 TODOS OS TESTES PASSARAM!\nO sistema de upload está funcionando corretamente!`, 'success')
+        updateStatus(4, 'success')
+        window.testImagePath = null
+      } catch (error) {
+        showResult(4, `❌ Erro: ${error.message}\n\nPossíveis causas:\n- Sem permissão de delete\n- Arquivo não existe\n- Policy bloqueando`, 'error')
+        updateStatus(4, 'error')
+      } finally {
+        btn.disabled = false
+        btn.textContent = 'Executar Teste 4'
+      }
+    }
+
+    // Expor funções globalmente
+    window.testBuckets = testBuckets
+    window.testUpload = testUpload
+    window.testPublicUrl = testPublicUrl
+    window.testDelete = testDelete
+  </script>
+</body>
+</html>
