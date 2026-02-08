@@ -1,0 +1,16 @@
+# robots.txt for CreativART's
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow admin and checkout pages
+Disallow: /admin/
+Disallow: /checkout/
+Disallow: /carrinho/
+Disallow: /conta/
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://www.creativarts.com/sitemap.xml
+
