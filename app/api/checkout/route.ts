@@ -103,6 +103,13 @@ export async function POST(request: NextRequest) {
         shipping_address: JSON.stringify(shippingAddress),
         coupon_id: coupon?.id || '',
         coupon_code: coupon?.code || '',
+        cart_items: JSON.stringify(items.map((item: CartItem) => ({
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          quantity: item.quantity,
+          price: item.price,
+          customization: item.customization,
+        }))),
       },
       shipping_address_collection: {
         allowed_countries: ['PT', 'ES', 'FR', 'DE', 'IT', 'GB'],

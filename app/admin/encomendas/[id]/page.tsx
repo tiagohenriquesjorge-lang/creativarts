@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import { 
-  ArrowLeft, 
-  Package, 
-  User, 
-  MapPin, 
-  CreditCard, 
+import { incrementStock } from '@/lib/stock/stockManager'
+import {
+  ArrowLeft,
+  Package,
+  User,
+  MapPin,
+  CreditCard,
   Printer,
   Download,
   Clock,
@@ -129,7 +130,7 @@ export default function OrderDetailPage() {
 
   async function updateStatus(newStatus: string) {
     if (!order) return
-    
+
     setUpdating(true)
     try {
       const { error } = await supabase
@@ -144,6 +145,59 @@ export default function OrderDetailPage() {
     } catch (error) {
       console.error('Error updating status:', error)
       alert('Erro ao atualizar status')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  async function cancelOrder() {
+    if (!order) return
+
+    if (!confirm('Tem certeza que deseja cancelar esta encomenda? O stock será devolvido.')) {
+      return
+    }
+
+    setUpdating(true)
+    try {
+      // 1. Fetch order items with variant_id
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select('variant_id, quantity')
+        .eq('order_id', order.id)
+
+      if (itemsError) throw itemsError
+
+      // 2. Increment stock for each item with variant
+      for (const item of items || []) {
+        if (item.variant_id) {
+          const result = await incrementStock(
+            item.variant_id,
+            item.quantity,
+            order.id,
+            undefined // Current admin user (optional)
+          )
+
+          if (!result.success) {
+            console.error('Error incrementing stock:', result.error)
+            // Continue even if one fails
+          }
+        }
+      }
+
+      // 3. Update order status to cancelled
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', order.id)
+
+      if (updateError) throw updateError
+
+      // 4. Reload order
+      await loadOrder()
+      alert('Encomenda cancelada com sucesso! Stock devolvido.')
+    } catch (error) {
+      console.error('Error cancelling order:', error)
+      alert('Erro ao cancelar encomenda')
     } finally {
       setUpdating(false)
     }
@@ -480,6 +534,23 @@ export default function OrderDetailPage() {
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
                   Atualizando...
+                </div>
+              )}
+
+              {/* Cancel Order Button */}
+              {order.status !== 'cancelled' && order.status !== 'refunded' && (
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={cancelOrder}
+                    disabled={updating}
+                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    <XCircle className="w-5 h-5" />
+                    Cancelar Encomenda e Devolver Stock
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Esta ação irá cancelar a encomenda e devolver o stock ao inventário
+                  </p>
                 </div>
               )}
             </div>
