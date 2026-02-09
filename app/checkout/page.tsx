@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cartStore'
 import { useToastStore } from '@/store/toastStore'
 import CheckoutSteps from '@/components/checkout/CheckoutSteps'
+import CartReview from '@/components/checkout/CartReview'
 import PersonalInfoForm, { PersonalInfo } from '@/components/checkout/PersonalInfoForm'
 import ShippingForm, { ShippingAddress } from '@/components/checkout/ShippingForm'
 import OrderSummary from '@/components/checkout/OrderSummary'
@@ -13,16 +14,19 @@ import Link from 'next/link'
 import * as gtag from '@/lib/analytics/gtag'
 
 const steps = [
-  { number: 1, title: 'Informações', description: 'Dados pessoais' },
-  { number: 2, title: 'Envio', description: 'Morada de entrega' },
-  { number: 3, title: 'Pagamento', description: 'Método de pagamento' },
+  { number: 1, title: 'Carrinho', description: 'Reveja os produtos' },
+  { number: 2, title: 'Informações', description: 'Dados pessoais' },
+  { number: 3, title: 'Envio', description: 'Morada de entrega' },
+  { number: 4, title: 'Pagamento', description: 'Finalizar pedido' },
 ]
+
+const STORAGE_KEY = 'creativarts_checkout_data'
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, coupon, discount, applyCoupon, removeCoupon, getSubtotal, getTotal, clearCart } = useCartStore()
+  const { items, coupon, discount, applyCoupon, removeCoupon, getSubtotal, getTotal, clearCart, updateQuantity, removeItem } = useCartStore()
   const toast = useToastStore()
-  
+
   const [currentStep, setCurrentStep] = useState(1)
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -32,6 +36,7 @@ export default function CheckoutPage() {
     lastName: '',
     email: '',
     phone: '',
+    nif: '',
   })
 
   const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
@@ -40,11 +45,40 @@ export default function CheckoutPage() {
     postalCode: '',
     country: '',
     notes: '',
+    shippingMethod: 'standard',
   })
 
   // Errors
   const [personalInfoErrors, setPersonalInfoErrors] = useState<Partial<Record<keyof PersonalInfo, string>>>({})
   const [shippingErrors, setShippingErrors] = useState<Partial<Record<keyof ShippingAddress, string>>>({})
+
+  // Load saved data from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const data = JSON.parse(saved)
+        if (data.personalInfo) setPersonalInfo(data.personalInfo)
+        if (data.shippingAddress) setShippingAddress(data.shippingAddress)
+        if (data.currentStep) setCurrentStep(data.currentStep)
+      }
+    } catch (error) {
+      console.error('Error loading checkout data:', error)
+    }
+  }, [])
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        personalInfo,
+        shippingAddress,
+        currentStep,
+      }))
+    } catch (error) {
+      console.error('Error saving checkout data:', error)
+    }
+  }, [personalInfo, shippingAddress, currentStep])
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -61,8 +95,15 @@ export default function CheckoutPage() {
 
   // Calculate totals
   const subtotal = getSubtotal()
-  const shipping = subtotal >= 50 ? 0 : 5.99
-  const total = getTotal()
+  const getShippingCost = () => {
+    if (shippingAddress.shippingMethod === 'express') {
+      return 9.99
+    }
+    // Standard shipping: free over €50
+    return subtotal >= 50 ? 0 : 5.99
+  }
+  const shipping = getShippingCost()
+  const total = getTotal() + shipping
 
   // Validation functions
   const validatePersonalInfo = (): boolean => {
@@ -102,6 +143,9 @@ export default function CheckoutPage() {
     if (!shippingAddress.country) {
       errors.country = 'Campo obrigatório'
     }
+    if (!shippingAddress.shippingMethod) {
+      errors.shippingMethod = 'Selecione um método de envio'
+    }
 
     setShippingErrors(errors)
     return Object.keys(errors).length === 0
@@ -110,15 +154,21 @@ export default function CheckoutPage() {
   // Navigation handlers
   const handleNext = () => {
     if (currentStep === 1) {
+      // Step 1: Cart Review - just move to next step
+      setCurrentStep(2)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (currentStep === 2) {
+      // Step 2: Personal Info - validate before moving
       if (validatePersonalInfo()) {
-        setCurrentStep(2)
+        setCurrentStep(3)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
         toast.error('Por favor, preencha todos os campos obrigatórios')
       }
-    } else if (currentStep === 2) {
+    } else if (currentStep === 3) {
+      // Step 3: Shipping - validate before moving
       if (validateShippingAddress()) {
-        setCurrentStep(3)
+        setCurrentStep(4)
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
         toast.error('Por favor, preencha todos os campos obrigatórios')
@@ -148,6 +198,7 @@ export default function CheckoutPage() {
           coupon,
           personalInfo,
           shippingAddress,
+          shippingCost: shipping,
         }),
       })
 
@@ -156,6 +207,9 @@ export default function CheckoutPage() {
       }
 
       const { url } = await response.json()
+
+      // Clear saved checkout data
+      localStorage.removeItem(STORAGE_KEY)
 
       // Redirect to Stripe Checkout
       if (url) {
@@ -201,6 +255,14 @@ export default function CheckoutPage() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg border-2 border-brand-gray-light p-6">
               {currentStep === 1 && (
+                <CartReview
+                  items={items}
+                  onUpdateQuantity={updateQuantity}
+                  onRemoveItem={removeItem}
+                />
+              )}
+
+              {currentStep === 2 && (
                 <PersonalInfoForm
                   data={personalInfo}
                   onChange={setPersonalInfo}
@@ -208,7 +270,7 @@ export default function CheckoutPage() {
                 />
               )}
 
-              {currentStep === 2 && (
+              {currentStep === 3 && (
                 <ShippingForm
                   data={shippingAddress}
                   onChange={setShippingAddress}
@@ -216,57 +278,132 @@ export default function CheckoutPage() {
                 />
               )}
 
-              {currentStep === 3 && (
+              {currentStep === 4 && (
                 <div className="space-y-6">
                   <div>
                     <h2 className="text-2xl font-heading font-bold text-brand-gray-dark mb-2">
-                      Pagamento
+                      Pagamento Seguro
                     </h2>
                     <p className="text-brand-gray-dark/70">
-                      Escolha o método de pagamento
+                      Reveja os dados e finalize o seu pedido
                     </p>
                   </div>
 
-                  <div className="bg-brand-yellow/10 rounded-lg p-6 text-center">
-                    <CreditCard className="h-12 w-12 text-brand-blue mx-auto mb-4" />
-                    <p className="text-brand-gray-dark font-medium mb-2">
-                      Integração de pagamento em desenvolvimento
-                    </p>
-                    <p className="text-sm text-brand-gray-dark/70">
-                      Em breve: Stripe, PayPal, Multibanco e MB WAY
-                    </p>
+                  {/* Payment Methods Info */}
+                  <div className="bg-gradient-to-br from-brand-blue/10 to-brand-yellow/10 rounded-lg p-6">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="p-3 bg-white rounded-lg shadow-sm">
+                        <CreditCard className="h-8 w-8 text-brand-blue" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-heading font-bold text-brand-gray-dark mb-2">
+                          Pagamento Processado por Stripe
+                        </h3>
+                        <p className="text-sm text-brand-gray-dark/80 mb-3">
+                          Pagamento 100% seguro e encriptado. Os seus dados bancários nunca são armazenados nos nossos servidores.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-white rounded-lg p-3 text-center">
+                        <p className="text-xs font-semibold text-brand-gray-dark">💳 Cartão</p>
+                        <p className="text-xs text-brand-gray-dark/60 mt-1">Visa, Mastercard</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 text-center">
+                        <p className="text-xs font-semibold text-brand-gray-dark">🏦 Multibanco</p>
+                        <p className="text-xs text-brand-gray-dark/60 mt-1">Referência MB</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 text-center">
+                        <p className="text-xs font-semibold text-brand-gray-dark">📱 MB WAY</p>
+                        <p className="text-xs text-brand-gray-dark/60 mt-1">Pagamento móvel</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 text-center">
+                        <p className="text-xs font-semibold text-brand-gray-dark">🔒 Seguro</p>
+                        <p className="text-xs text-brand-gray-dark/60 mt-1">SSL 256-bit</p>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Order Review */}
-                  <div className="bg-brand-gray-light/30 rounded-lg p-6">
-                    <h3 className="font-heading font-bold text-brand-gray-dark mb-4">
-                      Revisão do Pedido
+                  <div className="bg-white rounded-lg border-2 border-brand-gray-light p-6">
+                    <h3 className="font-heading font-bold text-brand-gray-dark mb-4 flex items-center gap-2">
+                      <span>📋</span>
+                      Resumo do Pedido
                     </h3>
 
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-4 text-sm">
+                      {/* Personal Info */}
                       <div>
-                        <p className="font-medium text-brand-gray-dark mb-1">Dados Pessoais:</p>
-                        <p className="text-brand-gray-dark/70">
-                          {personalInfo.firstName} {personalInfo.lastName}
+                        <p className="font-semibold text-brand-gray-dark mb-2 flex items-center gap-2">
+                          <span>👤</span>
+                          Dados Pessoais
                         </p>
-                        <p className="text-brand-gray-dark/70">{personalInfo.email}</p>
-                        <p className="text-brand-gray-dark/70">{personalInfo.phone}</p>
+                        <div className="pl-6 space-y-1">
+                          <p className="text-brand-gray-dark/80">
+                            {personalInfo.firstName} {personalInfo.lastName}
+                          </p>
+                          <p className="text-brand-gray-dark/70">{personalInfo.email}</p>
+                          <p className="text-brand-gray-dark/70">{personalInfo.phone}</p>
+                          {personalInfo.nif && (
+                            <p className="text-brand-gray-dark/70">NIF: {personalInfo.nif}</p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="border-t border-brand-gray-light pt-3">
-                        <p className="font-medium text-brand-gray-dark mb-1">Morada de Envio:</p>
-                        <p className="text-brand-gray-dark/70">{shippingAddress.address}</p>
-                        <p className="text-brand-gray-dark/70">
-                          {shippingAddress.postalCode} {shippingAddress.city}
+                      {/* Shipping Info */}
+                      <div className="border-t border-brand-gray-light pt-4">
+                        <p className="font-semibold text-brand-gray-dark mb-2 flex items-center gap-2">
+                          <span>📦</span>
+                          Envio
                         </p>
-                        <p className="text-brand-gray-dark/70">{shippingAddress.country}</p>
-                        {shippingAddress.notes && (
-                          <p className="text-brand-gray-dark/70 mt-2 italic">
-                            Notas: {shippingAddress.notes}
+                        <div className="pl-6 space-y-1">
+                          <p className="text-brand-gray-dark/80">{shippingAddress.address}</p>
+                          <p className="text-brand-gray-dark/70">
+                            {shippingAddress.postalCode} {shippingAddress.city}
                           </p>
-                        )}
+                          <p className="text-brand-gray-dark/70">{shippingAddress.country}</p>
+                          <p className="text-brand-gray-dark/70 mt-2">
+                            <span className="font-medium">Método:</span>{' '}
+                            {shippingAddress.shippingMethod === 'express' ? 'Expresso (1-2 dias)' : 'Standard (3-5 dias)'}
+                          </p>
+                          {shippingAddress.notes && (
+                            <p className="text-brand-gray-dark/70 mt-2 italic">
+                              Notas: {shippingAddress.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Products */}
+                      <div className="border-t border-brand-gray-light pt-4">
+                        <p className="font-semibold text-brand-gray-dark mb-2 flex items-center gap-2">
+                          <span>🛍️</span>
+                          Produtos ({items.length})
+                        </p>
+                        <div className="pl-6 space-y-2">
+                          {items.map((item) => (
+                            <div key={item.id} className="flex justify-between text-brand-gray-dark/70">
+                              <span>
+                                {item.quantity}x {item.product.name}
+                                {item.variant?.name && ` (${item.variant.name})`}
+                              </span>
+                              <span className="font-medium">€{(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Security Notice */}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-sm">
+                    <p className="flex items-start gap-2 text-green-800">
+                      <span className="text-lg">🔒</span>
+                      <span>
+                        <strong>Pagamento 100% Seguro:</strong> Ao clicar em "Finalizar Pedido", será redirecionado para a página de pagamento segura da Stripe. Nenhum dado bancário é armazenado no nosso site.
+                      </span>
+                    </p>
                   </div>
                 </div>
               )}
@@ -276,19 +413,27 @@ export default function CheckoutPage() {
                 {currentStep > 1 ? (
                   <button
                     onClick={handleBack}
-                    className="btn-outline flex items-center gap-2"
+                    disabled={isProcessing}
+                    className="btn-outline flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ArrowLeft className="h-4 w-4" />
                     Voltar
                   </button>
                 ) : (
-                  <div />
+                  <Link
+                    href="/carrinho"
+                    className="btn-outline flex items-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Voltar ao Carrinho
+                  </Link>
                 )}
 
-                {currentStep < 3 ? (
+                {currentStep < 4 ? (
                   <button
                     onClick={handleNext}
-                    className="btn-primary flex items-center gap-2"
+                    disabled={currentStep === 1 && items.length === 0}
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Continuar
                     <ArrowRight className="h-4 w-4" />
@@ -297,17 +442,17 @@ export default function CheckoutPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={isProcessing}
-                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-lg px-8 py-3"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full" />
                         A processar...
                       </>
                     ) : (
                       <>
-                        <CreditCard className="h-4 w-4" />
-                        Finalizar Pedido
+                        <CreditCard className="h-5 w-5" />
+                        Finalizar Pedido - €{total.toFixed(2)}
                       </>
                     )}
                   </button>

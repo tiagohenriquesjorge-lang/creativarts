@@ -7,6 +7,7 @@ export interface PersonalInfo {
   lastName: string
   email: string
   phone: string
+  nif?: string
 }
 
 interface PersonalInfoFormProps {
@@ -96,25 +97,46 @@ export default function PersonalInfoForm({ data, onChange, errors }: PersonalInf
         )}
       </div>
 
-      {/* Phone */}
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-brand-gray-dark mb-2">
-          Telefone *
-        </label>
-        <div className="relative">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-brand-gray-dark/40" />
-          <input
-            type="tel"
-            id="phone"
-            value={data.phone}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            className={`input-field pl-10 ${errors.phone ? 'border-brand-red' : ''}`}
-            placeholder="+351 912 345 678"
-          />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Phone */}
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-brand-gray-dark mb-2">
+            Telefone *
+          </label>
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-brand-gray-dark/40" />
+            <input
+              type="tel"
+              id="phone"
+              value={data.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              className={`input-field pl-10 ${errors.phone ? 'border-brand-red' : ''}`}
+              placeholder="+351 912 345 678"
+            />
+          </div>
+          {errors.phone && (
+            <p className="mt-1 text-sm text-brand-red">{errors.phone}</p>
+          )}
         </div>
-        {errors.phone && (
-          <p className="mt-1 text-sm text-brand-red">{errors.phone}</p>
-        )}
+
+        {/* NIF */}
+        <div>
+          <label htmlFor="nif" className="block text-sm font-medium text-brand-gray-dark mb-2">
+            NIF (opcional)
+          </label>
+          <input
+            type="text"
+            id="nif"
+            value={data.nif || ''}
+            onChange={(e) => handleChange('nif', e.target.value)}
+            className="input-field"
+            placeholder="123456789"
+            maxLength={9}
+          />
+          <p className="mt-1 text-xs text-brand-gray-dark/60">
+            Para fatura com NIF
+          </p>
+        </div>
       </div>
 
       <div className="bg-brand-blue/5 rounded-lg p-4 text-sm text-brand-gray-dark/80">

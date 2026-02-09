@@ -1,6 +1,6 @@
 'use client'
 
-import { MapPin, Home, Building2 } from 'lucide-react'
+import { MapPin, Home, Building2, Truck, Package } from 'lucide-react'
 
 export interface ShippingAddress {
   address: string
@@ -8,6 +8,7 @@ export interface ShippingAddress {
   postalCode: string
   country: string
   notes?: string
+  shippingMethod?: 'standard' | 'express'
 }
 
 interface ShippingFormProps {
@@ -121,6 +122,83 @@ export default function ShippingForm({ data, onChange, errors }: ShippingFormPro
         )}
       </div>
 
+      {/* Shipping Method */}
+      <div>
+        <label className="block text-sm font-medium text-brand-gray-dark mb-3">
+          Método de Envio *
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Standard Shipping */}
+          <button
+            type="button"
+            onClick={() => handleChange('shippingMethod', 'standard')}
+            className={`
+              relative p-4 rounded-lg border-2 text-left transition-all
+              ${data.shippingMethod === 'standard'
+                ? 'border-brand-blue bg-brand-blue/5'
+                : 'border-brand-gray-light hover:border-brand-blue/50'
+              }
+            `}
+          >
+            <div className="flex items-start gap-3">
+              <Package className={`w-6 h-6 mt-0.5 ${data.shippingMethod === 'standard' ? 'text-brand-blue' : 'text-brand-gray-dark/60'}`} />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-semibold text-brand-gray-dark">Envio Standard</p>
+                  <p className="text-sm font-semibold text-brand-gray-dark">Grátis</p>
+                </div>
+                <p className="text-sm text-brand-gray-dark/70">
+                  Entrega em 3-5 dias úteis
+                </p>
+              </div>
+            </div>
+            {data.shippingMethod === 'standard' && (
+              <div className="absolute top-2 right-2 w-5 h-5 bg-brand-blue rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+          </button>
+
+          {/* Express Shipping */}
+          <button
+            type="button"
+            onClick={() => handleChange('shippingMethod', 'express')}
+            className={`
+              relative p-4 rounded-lg border-2 text-left transition-all
+              ${data.shippingMethod === 'express'
+                ? 'border-brand-blue bg-brand-blue/5'
+                : 'border-brand-gray-light hover:border-brand-blue/50'
+              }
+            `}
+          >
+            <div className="flex items-start gap-3">
+              <Truck className={`w-6 h-6 mt-0.5 ${data.shippingMethod === 'express' ? 'text-brand-blue' : 'text-brand-gray-dark/60'}`} />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-semibold text-brand-gray-dark">Envio Expresso</p>
+                  <p className="text-sm font-semibold text-brand-gray-dark">€9.99</p>
+                </div>
+                <p className="text-sm text-brand-gray-dark/70">
+                  Entrega em 1-2 dias úteis
+                </p>
+              </div>
+            </div>
+            {data.shippingMethod === 'express' && (
+              <div className="absolute top-2 right-2 w-5 h-5 bg-brand-blue rounded-full flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            )}
+          </button>
+        </div>
+        {errors.shippingMethod && (
+          <p className="mt-2 text-sm text-brand-red">{errors.shippingMethod}</p>
+        )}
+      </div>
+
       {/* Notes */}
       <div>
         <label htmlFor="notes" className="block text-sm font-medium text-brand-gray-dark mb-2">
@@ -140,7 +218,7 @@ export default function ShippingForm({ data, onChange, errors }: ShippingFormPro
         <p className="flex items-start gap-2">
           <span className="text-brand-yellow mt-0.5">📦</span>
           <span>
-            <strong>Envio grátis</strong> para encomendas acima de 50€. Entrega em 3-5 dias úteis.
+            <strong>Envio grátis</strong> para encomendas acima de 50€ (apenas envio standard).
           </span>
         </p>
       </div>
