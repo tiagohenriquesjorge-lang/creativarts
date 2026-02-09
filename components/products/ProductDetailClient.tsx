@@ -7,7 +7,7 @@ import { useCartStore } from '@/store/cartStore'
 import { useToastStore } from '@/store/toastStore'
 import type { Product, ProductVariant, CartItemCustomization } from '@/types'
 import { formatPrice } from '@/lib/utils/format'
-import { ShoppingCart, Heart, Share2, Truck, RotateCcw, Shield, ChevronLeft, Sparkles } from 'lucide-react'
+import { ShoppingCart, Heart, Share2, Truck, RotateCcw, Shield, ChevronLeft, Sparkles, AlertCircle } from 'lucide-react'
 import TextCustomization from '@/components/customization/TextCustomization'
 import ImageUpload from '@/components/customization/ImageUpload'
 import ProductPreview from '@/components/customization/ProductPreview'
@@ -306,13 +306,41 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
           {/* Add to Cart */}
           <div className="space-y-3 mb-8">
+            {/* Stock Warning */}
+            {selectedVariant && selectedVariant.stock_quantity !== undefined && selectedVariant.stock_quantity <= 10 && selectedVariant.stock_quantity > 0 && (
+              <div className="flex items-center gap-2 p-3 bg-brand-yellow/10 border border-brand-yellow/30 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-brand-yellow flex-shrink-0" />
+                <p className="text-sm text-brand-gray-dark">
+                  <span className="font-semibold">Últimas unidades!</span> Apenas {selectedVariant.stock_quantity} em stock
+                </p>
+              </div>
+            )}
+
+            {/* Out of Stock Warning */}
+            {selectedVariant && selectedVariant.stock_quantity === 0 && (
+              <div className="flex items-center gap-2 p-3 bg-brand-red/10 border border-brand-red/30 rounded-lg">
+                <AlertCircle className="h-5 w-5 text-brand-red flex-shrink-0" />
+                <p className="text-sm text-brand-gray-dark">
+                  <span className="font-semibold">Produto esgotado</span>
+                </p>
+              </div>
+            )}
+
             <button
               onClick={handleAddToCart}
-              disabled={!selectedVariant && product.variants && product.variants.length > 0}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              disabled={
+                (!selectedVariant && product.variants && product.variants.length > 0) ||
+                (selectedVariant ? selectedVariant.stock_quantity === 0 : false)
+              }
+              className="btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ShoppingCart className="h-5 w-5" />
-              {hasCustomization ? 'Adicionar Produto Personalizado' : 'Adicionar ao Carrinho'}
+              {selectedVariant && selectedVariant.stock_quantity === 0
+                ? 'Esgotado'
+                : hasCustomization
+                  ? 'Adicionar Produto Personalizado'
+                  : 'Adicionar ao Carrinho'
+              }
             </button>
 
             {product.is_customizable && !showCustomization && (

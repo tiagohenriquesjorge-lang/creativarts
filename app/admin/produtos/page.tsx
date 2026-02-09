@@ -6,6 +6,12 @@ import { supabase } from '@/lib/supabase/client'
 import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
 import Image from 'next/image'
 
+interface ProductVariant {
+  id: string
+  name: string
+  stock_quantity: number
+}
+
 interface Product {
   id: string
   name: string
@@ -16,6 +22,7 @@ interface Product {
   created_at: string
   product_images: { image_url: string }[]
   categories: { name: string } | null
+  variants?: ProductVariant[]
 }
 
 export default function AdminProductsPage() {
@@ -34,7 +41,8 @@ export default function AdminProductsPage() {
         .select(`
           *,
           product_images(image_url),
-          categories(name)
+          categories(name),
+          variants:product_variants(id, name, stock_quantity)
         `)
         .order('created_at', { ascending: false })
 
@@ -151,6 +159,9 @@ export default function AdminProductsPage() {
                   Preço
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -161,7 +172,7 @@ export default function AdminProductsPage() {
             <tbody className="divide-y divide-gray-200">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     Nenhum produto encontrado
                   </td>
                 </tr>
@@ -222,6 +233,39 @@ function ProductRow({
         <span className="text-sm font-medium text-gray-900">
           €{Number(product.base_price).toFixed(2)}
         </span>
+      </td>
+      <td className="px-6 py-4">
+        {product.variants && product.variants.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            {product.variants.map((variant) => {
+              const stock = variant.stock_quantity || 0
+              const isLowStock = stock > 0 && stock <= 10
+              const isOutOfStock = stock === 0
+
+              return (
+                <div key={variant.id} className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${
+                    isOutOfStock ? 'text-red-600' : isLowStock ? 'text-yellow-600' : 'text-gray-900'
+                  }`}>
+                    {stock}
+                  </span>
+                  {isOutOfStock && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                      Esgotado
+                    </span>
+                  )}
+                  {isLowStock && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                      Baixo
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-500">-</span>
+        )}
       </td>
       <td className="px-6 py-4">
         <button

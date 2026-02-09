@@ -34,8 +34,35 @@ export const useCartStore = create<CartState>()(
 
       addItem: (product, variant, quantity = 1, customization) => {
         const state = get()
-        const price = variant 
-          ? product.base_price + variant.price_adjustment 
+
+        // Check stock availability
+        if (variant) {
+          const currentStock = variant.stock_quantity || 0
+
+          // Calculate total quantity in cart for this variant
+          const existingItem = state.items.find(
+            (item) =>
+              item.product_id === product.id &&
+              item.variant_id === variant?.id &&
+              JSON.stringify(item.customization) === JSON.stringify(customization)
+          )
+
+          const totalQuantity = (existingItem?.quantity || 0) + quantity
+
+          if (currentStock === 0) {
+            // Show toast notification (will be handled by component)
+            console.warn('Produto esgotado')
+            return
+          }
+
+          if (totalQuantity > currentStock) {
+            console.warn(`Stock insuficiente. Disponível: ${currentStock} unidades`)
+            return
+          }
+        }
+
+        const price = variant
+          ? product.base_price + variant.price_adjustment
           : product.base_price
 
         // Check if item already exists (same product, variant, and customization)
