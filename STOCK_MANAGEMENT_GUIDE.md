@@ -1,8 +1,8 @@
 # 🏭 Guia do Sistema de Gestão de Stock - CreativART's
 
-**Data:** 2026-02-09  
-**Status:** ⏳ 70% Implementado  
-**Versão:** 1.0
+**Data:** 2026-02-09
+**Status:** ✅ 100% COMPLETO
+**Versão:** 2.0
 
 ---
 
@@ -17,11 +17,11 @@ O sistema de gestão de stock controla automaticamente o inventário de produtos
 - ✅ Coluna de stock na página admin
 - ✅ Tabela de histórico de movimentos
 - ✅ Funções auxiliares de gestão
+- ✅ Decrementar stock ao criar encomenda (via webhook)
+- ✅ Incrementar stock ao cancelar encomenda
+- ✅ Página de histórico de stock no admin
 
-### **Funcionalidades Pendentes:**
-- ⏳ Decrementar stock ao criar encomenda (via webhook)
-- ⏳ Incrementar stock ao cancelar encomenda
-- ⏳ Página de histórico de stock no admin
+### **Sistema 100% Completo!**
 
 ---
 
@@ -315,15 +315,93 @@ async function cancelOrder(orderId: string) {
 | **Bloqueio de compra** | ✅ 100% | `components/products/ProductDetailClient.tsx` |
 | **Alertas visuais PDP** | ✅ 100% | `components/products/ProductDetailClient.tsx` |
 | **Coluna stock admin** | ✅ 100% | `app/admin/produtos/page.tsx` |
-| **Decrementar ao vender** | ⏳ 0% | `app/api/webhooks/stripe/route.ts` |
-| **Incrementar ao cancelar** | ⏳ 0% | `app/admin/encomendas/[id]/page.tsx` |
-| **Página de histórico** | ⏳ 0% | `app/admin/stock/page.tsx` |
+| **Decrementar ao vender** | ✅ 100% | `app/api/webhooks/stripe/route.ts` |
+| **Incrementar ao cancelar** | ✅ 100% | `app/admin/encomendas/[id]/page.tsx` |
+| **Página de histórico** | ✅ 100% | `app/admin/stock/page.tsx` |
 
-**PROGRESSO GERAL:** 70% completo
+**PROGRESSO GERAL:** ✅ 100% COMPLETO!
 
 ---
 
-**Criado em:** 2026-02-09  
-**Autor:** Augment Agent  
-**Status:** ⏳ Em Desenvolvimento
+## 📊 **PÁGINA DE HISTÓRICO DE STOCK**
+
+### **Arquivo:** `app/admin/stock/page.tsx` (385 linhas)
+
+**Funcionalidades Implementadas:**
+
+#### **1. Listagem de Movimentos** ✅
+- Tabela com todos os movimentos de stock
+- Ordenação por data (mais recentes primeiro)
+- Limite de 500 registos
+- Informações exibidas:
+  - Data e hora do movimento
+  - Produto e variante
+  - SKU
+  - Razão (badge colorido com ícone)
+  - Alteração de quantidade (+/-)
+  - Stock anterior → Stock novo
+  - Link para encomenda (se aplicável)
+
+#### **2. Filtros Avançados** ✅
+- **Pesquisa:** Por nome de produto, variante, SKU ou número de encomenda
+- **Razão:** Filtrar por tipo de movimento (Venda, Cancelamento, Ajuste Manual, Correção)
+- **Data Início:** Filtrar movimentos a partir de uma data
+- **Data Fim:** Filtrar movimentos até uma data
+- **Contador:** Mostra "X de Y movimentos"
+
+#### **3. Exportação CSV** ✅
+- Botão "Exportar CSV" no topo da página
+- Exporta apenas os movimentos filtrados
+- Colunas: Data, Produto, Variante, SKU, Razão, Alteração, Stock Anterior, Stock Novo, Encomenda, Notas
+- Nome do ficheiro: `historico-stock-YYYY-MM-DD.csv`
+
+#### **4. Design e UX** ✅
+- Badges coloridos por razão:
+  - 🔴 Vermelho: Venda (TrendingDown)
+  - 🟢 Verde: Cancelamento (TrendingUp)
+  - 🔵 Azul: Ajuste Manual (Edit)
+  - 🟡 Amarelo: Correção (AlertCircle)
+- Alterações de quantidade com cores:
+  - Verde: Positivo (+)
+  - Vermelho: Negativo (-)
+- Link clicável para encomenda
+- Estado de loading
+- Mensagem quando não há resultados
+
+#### **5. Navegação** ✅
+- Adicionado ao menu lateral do admin
+- Ícone: History
+- Posição: Após "Categorias"
+
+---
+
+## 🎯 **COMO USAR A PÁGINA DE HISTÓRICO**
+
+### **Cenário 1: Ver Todas as Vendas**
+1. Aceder a `/admin/stock`
+2. Filtrar por Razão: "Venda"
+3. Ver todas as vendas que decrementaram stock
+
+### **Cenário 2: Auditar Cancelamentos**
+1. Filtrar por Razão: "Cancelamento"
+2. Ver todas as encomendas canceladas que devolveram stock
+3. Clicar no número da encomenda para ver detalhes
+
+### **Cenário 3: Exportar Relatório Mensal**
+1. Definir Data Início: 01/01/2026
+2. Definir Data Fim: 31/01/2026
+3. Clicar "Exportar CSV"
+4. Abrir ficheiro no Excel/Google Sheets
+
+### **Cenário 4: Procurar Movimento Específico**
+1. Pesquisar por SKU ou nome do produto
+2. Ver todos os movimentos desse produto
+3. Analisar padrão de vendas
+
+---
+
+**Criado em:** 2026-02-09
+**Atualizado em:** 2026-02-09
+**Autor:** Augment Agent
+**Status:** ✅ 100% COMPLETO
 
