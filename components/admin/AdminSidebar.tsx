@@ -2,14 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  Package, 
-  ShoppingCart, 
-  Tag, 
+import {
+  LayoutDashboard,
+  Package,
+  ShoppingCart,
+  Tag,
   FolderTree,
   LogOut,
-  Home
+  Home,
+  History
 } from 'lucide-react'
 import { signOut } from '@/lib/auth/adminAuth'
 import { useRouter } from 'next/navigation'
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Encomendas', href: '/admin/encomendas', icon: ShoppingCart },
   { name: 'Cupões', href: '/admin/cupoes', icon: Tag },
   { name: 'Categorias', href: '/admin/categorias', icon: FolderTree },
+  { name: 'Histórico Stock', href: '/admin/stock', icon: History },
 ]
 
 export default function AdminSidebar() {
